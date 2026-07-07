@@ -6,27 +6,28 @@ if (isset($_POST["ok"])) {
     include_once("connSQL.php");
     // 連線資料庫
 
-    $selectSQL = "SELECT * FROM members WHERE members_name = '$_POST[members_name]'";
-    //來一段SQL的SELECT語法吧
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("SELECT `members_name` FROM `members` WHERE `members_name` = ?");
+    $stmt->bind_param('s', $_POST['members_name']);
+    $stmt->execute();
+    $stmt->store_result();
 
-    $myData = $myconnect->query($selectSQL);
-    //執行上面那段SQL語法並將所得資料放進 $myData
-
-
-    if ($myData->num_rows > 0) {
+    if ($stmt->num_rows > 0) {
         //帳號重覆
-        header("Location:member_add_ng.php?username=$_POST[members_name]");
+        header("Location:member_add_ng.php?username=" . urlencode($_POST['members_name']));
+        die();
     } else {
         //沒有重覆
-        //寫入會員資料開始
-        $insertSQL = "INSERT INTO members(members_name, members_pw, members_sex, members_birthday, members_email) VALUES ('$_POST[members_name]','$_POST[members_pw]','$_POST[members_sex]','$_POST[members_birthday]','$_POST[members_email]')";
-        //來一段SQL的INSERT語法吧
-        $myData = $myconnect->query($insertSQL);
-        //執行上面那段SQL語法
-        if ($myData) {
+        //寫入會員資料開始（密碼以 password_hash 雜湊後儲存，不存明文）
+        $pwHash = password_hash((string)$_POST['members_pw'], PASSWORD_DEFAULT);
+        $ins = $myconnect->prepare("INSERT INTO members(members_name, members_pw, members_sex, members_birthday, members_email) VALUES (?,?,?,?,?)");
+        $ins->bind_param('sssss', $_POST['members_name'], $pwHash, $_POST['members_sex'], $_POST['members_birthday'], $_POST['members_email']);
+        if ($ins->execute()) {
             header("Location:member_add_OK.php");
+            die();
         } else {
-            echo "錯誤: " . $insertSQL . "<br>" . $myconnect->error;
+            // 不回顯 SQL 與資料庫錯誤細節，避免洩漏資料庫結構
+            echo "新增會員失敗，請稍後再試。";
         }
         //寫入會員資料結束
     }

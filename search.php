@@ -3,6 +3,7 @@
 // 還沒登入的話要跳轉出去
 if (!isset($_SESSION["username"])) {
     header("Location:member_error.php");
+    die();
 }
 ?>
 <!DOCTYPE html>
@@ -74,18 +75,23 @@ if (!isset($_SESSION["username"])) {
     <?php include_once("menu.php") ?>
     <h1>主題查詢</h1>
     <h2>您所查詢的關鍵字是：
-        <b><?php echo $_POST["kw"]; ?></b>
+        <b><?php echo htmlspecialchars(isset($_POST["kw"]) ? $_POST["kw"] : '', ENT_QUOTES, 'UTF-8'); ?></b>
     </h2>
     <?php
     include_once("connSQL.php");
     // 連線資料庫
-    $selectSQL = "SELECT * FROM `forum` WHERE $_POST[sk] LIKE '%$_POST[kw]%' ORDER BY `forum_id` DESC";
 
-    // 主題與內容關鍵字查詢
-    // $selectSQL = "SELECT * FROM `forum` WHERE `forum_title` LIKE '%$_POST[kw]%' OR `forum_msg` LIKE '%$_POST[kw]%'  ORDER BY `forum_id` DESC";
-
-
-    $myData = $myconnect->query($selectSQL);
+    // 欄位名不能用參數綁定，改用白名單驗證，防止 SQL injection
+    $sk = isset($_POST['sk']) ? $_POST['sk'] : '';
+    if (!in_array($sk, array('forum_title', 'members_name'), true)) {
+        die('非法的查詢欄位');
+    }
+    // 關鍵字用 prepared statement 綁定
+    $stmt = $myconnect->prepare("SELECT * FROM `forum` WHERE `$sk` LIKE ? ORDER BY `forum_id` DESC");
+    $like = '%' . (isset($_POST['kw']) ? $_POST['kw'] : '') . '%';
+    $stmt->bind_param('s', $like);
+    $stmt->execute();
+    $myData = $stmt->get_result();
     //執行上面那段SQL語法並將所得資料放進 $myData
 
     if ($myData->num_rows > 0) {
@@ -137,7 +143,12 @@ if (!isset($_SESSION["username"])) {
                                     《<?php echo $row["forum_kind"]; ?>》
                                 </strong>
                                 <em>
-                                    <?php echo str_replace($_POST["kw"], "<b>$_POST[kw]</b>", $row["forum_title"]); ?>
+                                    <?php
+                                    // 先對關鍵字與標題做 HTML 跳脫再組高亮字串，防止 XSS
+                                    $kwSafe = htmlspecialchars(isset($_POST["kw"]) ? $_POST["kw"] : '', ENT_QUOTES, 'UTF-8');
+                                    $titleSafe = htmlspecialchars($row["forum_title"], ENT_QUOTES, 'UTF-8');
+                                    echo ($kwSafe !== '') ? str_replace($kwSafe, "<b>$kwSafe</b>", $titleSafe) : $titleSafe;
+                                    ?>
                                 </em>
                             </a>
 

@@ -3,6 +3,7 @@
 // 還沒登入的話要跳轉出去
 if (!isset($_SESSION["username"])) {
     header("Location:member_error.php");
+    die();
 }
 ?>
 <!DOCTYPE html>
@@ -19,28 +20,43 @@ if (!isset($_SESSION["username"])) {
     <!-- 掛選單進來 -->
     <?php include_once("menu.php") ?>
     <?php
-    if ($_FILES["file"]["error"] > 0) {
-        echo "Error: " . $_FILES["file"]["error"];
+    if (!isset($_FILES["file"]) || $_FILES["file"]["error"] > 0) {
+        echo "Error: " . (isset($_FILES["file"]) ? (int)$_FILES["file"]["error"] : 0);
     } else {
-        unlink("upload/$_POST[mydel]");
-        
-        $aa = time();
-        $bb = $aa . $_FILES["file"]["name"];
-        move_uploaded_file($_FILES["file"]["tmp_name"], "upload/" . $aa . $_FILES["file"]["name"]);
+        // 上傳驗證：僅允許影像白名單副檔名，並用 getimagesize 確認為真實影像，
+        // 檔名以時間戳＋亂數重新命名，不沿用使用者原始檔名（防止上傳 .php 造成 RCE）
+        $ext = strtolower(pathinfo($_FILES["file"]["name"], PATHINFO_EXTENSION));
+        $allowExt = array("jpg", "jpeg", "png", "gif");
+        if (!in_array($ext, $allowExt, true) || getimagesize($_FILES["file"]["tmp_name"]) === false) {
+            die("只允許上傳 JPG / PNG / GIF 影像檔");
+        }
+
+        // 刪除舊照片：basename 去除路徑成分並確認確實位於 upload/ 內（防路徑穿越刪除任意檔案）
+        if (!empty($_POST["mydel"])) {
+            $oldName = basename((string)$_POST["mydel"]);
+            $oldPath = "upload/" . $oldName;
+            if ($oldName !== "" && $oldName !== "none.png" && is_file($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+
+        $bb = time() . bin2hex(random_bytes(8)) . "." . $ext;
+        move_uploaded_file($_FILES["file"]["tmp_name"], "upload/" . $bb);
 
 
         include_once("connSQL.php");
         // 連線資料庫
 
-        $updateSQL = "UPDATE `members` SET `members_photo`='$bb' WHERE  `members_name` = '$_SESSION[username]'";
-        //來一段SQL的UPDATE語法吧
+        // 使用 prepared statement 防止 SQL injection
+        $stmt = $myconnect->prepare("UPDATE `members` SET `members_photo` = ? WHERE `members_name` = ?");
+        $stmt->bind_param('ss', $bb, $_SESSION["username"]);
 
-        $myData = $myconnect->query($updateSQL);
-
-        if ($myData) {
+        if ($stmt->execute()) {
             header("Location:member_photo.php");
+            die();
         } else {
-            echo "錯誤: " . $updateSQL . "<br>" . $myconnect->error;
+            // 不回顯 SQL 與資料庫錯誤細節
+            echo "更新大頭照失敗，請稍後再試。";
         }
     }
     ?>

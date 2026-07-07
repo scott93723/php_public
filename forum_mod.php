@@ -7,6 +7,7 @@ include_once("connSQL.php");
 // 還沒登入的話要跳轉出去
 if (!isset($_SESSION["username"])) {
     header("Location:member_error.php");
+    die();
 }
 ?>
 <?php
