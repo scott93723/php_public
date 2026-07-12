@@ -34,15 +34,18 @@ if ($_SESSION["userlevel"] <> 5) {
     }
 
 
-    $updateSQL = "UPDATE `members` SET `members_pw`='$_POST[members_pw]',`members_sex`='$_POST[members_sex]',`members_birthday`='$_POST[members_birthday]',`members_email`='$_POST[members_email]',`members_level`='$_POST[members_level]',`members_power`='$members_power' WHERE `members_name` = '$_POST[members_name]'";
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("UPDATE `members` SET `members_pw`=?,`members_sex`=?,`members_birthday`=?,`members_email`=?,`members_level`=?,`members_power`=? WHERE `members_name` = ?");
     //來一段SQL的UPDATE語法吧
+    $stmt->bind_param('ssssiis', $_POST['members_pw'], $_POST['members_sex'], $_POST['members_birthday'], $_POST['members_email'], $_POST['members_level'], $members_power, $_POST['members_name']);
 
-    $myData = $myconnect->query($updateSQL);
+    $myData = $stmt->execute();
 
     if ($myData) {
         header("Location:admin_members_mod_ok.php");
     } else {
-        echo "錯誤: " . $updateSQL . "<br>" . $myconnect->error;
+        // 不回顯 SQL 與資料庫錯誤細節
+        echo "資料庫錯誤，請稍後再試";
     }
     ?>
 </body>

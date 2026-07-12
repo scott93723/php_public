@@ -23,10 +23,12 @@ if ($_SESSION["userlevel"] <> 5) {
     // 連線資料庫
 
 
-    $selectSQL = "SELECT `members`.*,`members_level_name`.* FROM `members` INNER JOIN `members_level_name` ON `members`.`members_level` = `members_level_name`.`members_level` WHERE `members`.`members_name` = '$_GET[username]'";
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("SELECT `members`.*,`members_level_name`.* FROM `members` INNER JOIN `members_level_name` ON `members`.`members_level` = `members_level_name`.`members_level` WHERE `members`.`members_name` = ?");
+    $stmt->bind_param('s', $_GET['username']);
+    $stmt->execute();
 
-
-    $myData = $myconnect->query($selectSQL);
+    $myData = $stmt->get_result();
     //執行上面那段SQL語法並將所得資料放進 $myData
     if ($myData->num_rows > 0) {
         $row = $myData->fetch_assoc();

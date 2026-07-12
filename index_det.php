@@ -86,10 +86,13 @@
     <?php
     include_once("connSQL.php");
     // 連線資料庫
-    $selectSQL = "SELECT `forum`.*,`members_level_name`.* FROM `forum` INNER JOIN `members_level_name` ON `forum`.`forum_level` = `members_level_name`.`members_level` WHERE `forum_id` = '$_GET[id]'";
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("SELECT `forum`.*,`members_level_name`.* FROM `forum` INNER JOIN `members_level_name` ON `forum`.`forum_level` = `members_level_name`.`members_level` WHERE `forum_id` = ?");
     //來一段SQL的SELECT語法吧
+    $stmt->bind_param('i', $_GET['id']);
+    $stmt->execute();
 
-    $myData = $myconnect->query($selectSQL);
+    $myData = $stmt->get_result();
     //執行上面那段SQL語法並將所得資料放進 $myData
 
     if ($myData->num_rows > 0) {
@@ -138,10 +141,13 @@
 
             <!-- 回覆內容 -->
             <?php
-            $selectSQL2 = "SELECT * FROM `forum_rep` WHERE `forum_id` = '$_GET[id]' ORDER BY `forum_rep_date` DESC";
+            // 使用 prepared statement 防止 SQL injection
+            $stmt2 = $myconnect->prepare("SELECT * FROM `forum_rep` WHERE `forum_id` = ? ORDER BY `forum_rep_date` DESC");
             //來一段SQL的SELECT語法吧
+            $stmt2->bind_param('i', $_GET['id']);
+            $stmt2->execute();
 
-            $myData2 = $myconnect->query($selectSQL2);
+            $myData2 = $stmt2->get_result();
             //執行上面那段SQL語法並將所得資料放進 $myData
 
             if ($myData2->num_rows > 0) {
@@ -204,9 +210,10 @@
                 ?>
             </div>
             <?php
-            // 人氣值加1
-            $updateSQL = "UPDATE `forum` SET `forum_view`=`forum_view`+1 WHERE `forum_id` = '$_GET[id]'";
-            $myconnect->query($updateSQL);
+            // 人氣值加1（使用 prepared statement 防止 SQL injection）
+            $stmt3 = $myconnect->prepare("UPDATE `forum` SET `forum_view`=`forum_view`+1 WHERE `forum_id` = ?");
+            $stmt3->bind_param('i', $_GET['id']);
+            $stmt3->execute();
             ?>
 
         <?php

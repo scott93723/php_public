@@ -21,15 +21,17 @@ if ($_SESSION["userlevel"] <> 5) {
     <?php
     include_once("connSQL.php");
     // 連線資料庫
-    $deleteSQL = "DELETE FROM `forum` WHERE `forum_id` = '$_GET[id]'";
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("DELETE FROM `forum` WHERE `forum_id` = ?");
+    $stmt->bind_param('i', $_GET['id']);
 
-
-    $myData = $myconnect->query($deleteSQL);
+    $myData = $stmt->execute();
 
     if ($myData) {
         header("Location:admin_forum.php");
     } else {
-        echo "錯誤: " . $deleteSQL . "<br>" . $myconnect->error;
+        // 不回顯 SQL 與資料庫錯誤細節
+        echo "資料庫錯誤，請稍後再試";
     }
     ?>
 </body>

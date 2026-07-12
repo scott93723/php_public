@@ -11,16 +11,19 @@ if ($_SESSION["userlevel"] <> 5) {
 ?>
 <?php
 if (isset($_POST["ok"])) {
-    $updateSQL = "UPDATE `forum` SET `forum_title`='$_POST[forum_title]',`forum_kind`='$_POST[forum_kind]',`forum_pic`='$_POST[forum_pic]',`forum_msg`='$_POST[forum_msg]',`forum_level`='$_POST[forum_level]' WHERE `forum_id` = '$_POST[forum_id]'";
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("UPDATE `forum` SET `forum_title`=?,`forum_kind`=?,`forum_pic`=?,`forum_msg`=?,`forum_level`=? WHERE `forum_id` = ?");
     //來一段SQL的UPDATE語法吧
+    $stmt->bind_param('ssssii', $_POST['forum_title'], $_POST['forum_kind'], $_POST['forum_pic'], $_POST['forum_msg'], $_POST['forum_level'], $_POST['forum_id']);
 
-    $myData2 = $myconnect->query($updateSQL);
+    $myData2 = $stmt->execute();
 
     if ($myData2) {
         header("Location:admin_forum.php");
         die();
     } else {
-        echo "錯誤: " . $updateSQL . "<br>" . $myconnect->error;
+        // 不回顯 SQL 與資料庫錯誤細節
+        echo "資料庫錯誤，請稍後再試";
     }
 }
 ?>
@@ -60,10 +63,13 @@ if (isset($_POST["ok"])) {
 
     <h1>更新主題</h1>
     <?php
-    $selectSQL = "SELECT * FROM `forum` WHERE `forum_id` = '$_GET[id]'";
+    // 使用 prepared statement 防止 SQL injection
+    $stmtSel = $myconnect->prepare("SELECT * FROM `forum` WHERE `forum_id` = ?");
     //來一段SQL的SELECT語法吧
+    $stmtSel->bind_param('i', $_GET['id']);
+    $stmtSel->execute();
 
-    $myData = $myconnect->query($selectSQL);
+    $myData = $stmtSel->get_result();
     //執行上面那段SQL語法並將所得資料放進 $myData
     if ($myData->num_rows > 0) {
         $row = $myData->fetch_assoc();

@@ -11,21 +11,25 @@ if (isset($_POST["ok"])) {
     include_once("connSQL.php");
     // 連線資料庫
 
-    $insertSQL = "INSERT INTO `forum`(`members_name`, `forum_title`, `forum_kind`, `forum_pic`, `forum_msg`, `forum_rep_date`,`forum_level`) VALUES ('$_POST[members_name]','$_POST[forum_title]','$_POST[forum_kind]','$_POST[forum_pic]','$_POST[forum_msg]',NOW(),'$_POST[forum_level]')";
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("INSERT INTO `forum`(`members_name`, `forum_title`, `forum_kind`, `forum_pic`, `forum_msg`, `forum_rep_date`,`forum_level`) VALUES (?,?,?,?,?,NOW(),?)");
     //來一段SQL的INSERT語法吧
-    $myData = $myconnect->query($insertSQL);
+    $stmt->bind_param('sssssi', $_POST['members_name'], $_POST['forum_title'], $_POST['forum_kind'], $_POST['forum_pic'], $_POST['forum_msg'], $_POST['forum_level']);
+    $myData = $stmt->execute();
     //執行上面那段SQL語法
 
     //新增主題，寶石+10
-    $updateSQL = "UPDATE `members` SET `members_power` = `members_power` + 10 WHERE `members_name` = '$_POST[members_name]'";
-    $myconnect->query($updateSQL);
+    $stmt2 = $myconnect->prepare("UPDATE `members` SET `members_power` = `members_power` + 10 WHERE `members_name` = ?");
+    $stmt2->bind_param('s', $_POST['members_name']);
+    $stmt2->execute();
 
 
 
     if ($myData) {
         header("Location:forum_add_ok.php");
     } else {
-        echo "錯誤: " . $insertSQL . "<br>" . $myconnect->error;
+        // 不回顯 SQL 與資料庫錯誤細節
+        echo "資料庫錯誤，請稍後再試";
     }
 }
 ?>

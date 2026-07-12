@@ -12,8 +12,11 @@
 <body>
     <?php
     include_once("connSQL.php");
-    $selectSQL = "SELECT * FROM `members` WHERE `members_name` = '$_SESSION[username]'";
-    $myData = $myconnect->query($selectSQL);
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("SELECT * FROM `members` WHERE `members_name` = ?");
+    $stmt->bind_param('s', $_SESSION['username']);
+    $stmt->execute();
+    $myData = $stmt->get_result();
     $row = $myData->fetch_assoc();
     if ($row["members_level"] <> 5) {
         if ($row["members_power"] >= 400) {
@@ -27,15 +30,20 @@
         } else {
             $mypower = 0;
         }
-        $updateSQL = "UPDATE `members` SET `members_level` = $mypower WHERE `members_name` = '$_SESSION[username]'";
-        $myconnect->query($updateSQL);
+        // 使用 prepared statement 防止 SQL injection
+        $stmtUp = $myconnect->prepare("UPDATE `members` SET `members_level` = ? WHERE `members_name` = ?");
+        $stmtUp->bind_param('is', $mypower, $_SESSION['username']);
+        $stmtUp->execute();
     }
 
 
-    $selectSQL2 = "SELECT `members`.*,`members_level_name`.* FROM `members` INNER JOIN `members_level_name` ON `members`.`members_level` = `members_level_name`.`members_level` WHERE members_name = '$_SESSION[username]'";
+    // 使用 prepared statement 防止 SQL injection
+    $stmt2 = $myconnect->prepare("SELECT `members`.*,`members_level_name`.* FROM `members` INNER JOIN `members_level_name` ON `members`.`members_level` = `members_level_name`.`members_level` WHERE members_name = ?");
     //來一段SQL的SELECT語法吧
+    $stmt2->bind_param('s', $_SESSION['username']);
+    $stmt2->execute();
 
-    $myData2 = $myconnect->query($selectSQL2);
+    $myData2 = $stmt2->get_result();
     //執行上面那段SQL語法並將所得資料放進 $myData
 
     if ($myData2->num_rows > 0) {

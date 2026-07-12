@@ -18,9 +18,12 @@
         <?php
 
         include_once("connSQL.php");
-        $selectSQL2 = "SELECT * FROM `members` WHERE `members_name` = '$_SESSION[username]'";
+        // 使用 prepared statement 防止 SQL injection
+        $stmt2 = $myconnect->prepare("SELECT * FROM `members` WHERE `members_name` = ?");
         //來一段SQL的SELECT語法吧
-        $myData2 = $myconnect->query($selectSQL2);
+        $stmt2->bind_param('s', $_SESSION['username']);
+        $stmt2->execute();
+        $myData2 = $stmt2->get_result();
         $row2 = $myData2->fetch_assoc();
 
 

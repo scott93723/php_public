@@ -35,10 +35,13 @@ if (!isset($_SESSION["username"])) {
     include_once("connSQL.php");
     // 連線資料庫
 
-    $selectSQL = "SELECT * FROM `members` WHERE `members_name` = '$_SESSION[username]'";
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("SELECT * FROM `members` WHERE `members_name` = ?");
     //來一段SQL的SELECT語法吧
+    $stmt->bind_param('s', $_SESSION['username']);
+    $stmt->execute();
 
-    $myData = $myconnect->query($selectSQL);
+    $myData = $stmt->get_result();
     //執行上面那段SQL語法並將所得資料放進 $myData
     if ($myData->num_rows > 0) {
         $row = $myData->fetch_assoc();

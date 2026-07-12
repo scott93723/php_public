@@ -16,15 +16,18 @@
     include_once("connSQL.php");
     // 連線資料庫
 
-    $updateSQL = "UPDATE `members` SET `members_pw`='$_POST[members_pw]',`members_sex`='$_POST[members_sex]',`members_birthday`='$_POST[members_birthday]',`members_email`='$_POST[members_email]' WHERE  `members_name` = '$_SESSION[username]'";
+    // 使用 prepared statement 防止 SQL injection
+    $stmt = $myconnect->prepare("UPDATE `members` SET `members_pw`=?,`members_sex`=?,`members_birthday`=?,`members_email`=? WHERE  `members_name` = ?");
     //來一段SQL的UPDATE語法吧
+    $stmt->bind_param('sssss', $_POST['members_pw'], $_POST['members_sex'], $_POST['members_birthday'], $_POST['members_email'], $_SESSION['username']);
 
-    $myData = $myconnect->query($updateSQL);
+    $myData = $stmt->execute();
 
     if ($myData) {
         header("Location:member_mod_ok.php");
     } else {
-        echo "錯誤: " . $updateSQL . "<br>" . $myconnect->error;
+        // 不回顯 SQL 與資料庫錯誤細節
+        echo "資料庫錯誤，請稍後再試";
     }
     ?>
 </body>
